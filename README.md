@@ -21,7 +21,7 @@ O botão **Aplicar ao mouse** envia os comandos ao hardware e salva o perfil
 somente se o driver confirmar o envio. Se falhar, o perfil anterior permanece
 intacto; os comandos já enviados podem ter efeito parcial no dispositivo.
 O botão só fica ativo após uma resposta válida do R1. A bateria é consultada ao abrir, a cada
-30 segundos enquanto a janela estiver aberta e pelo botão **Atualizar**.
+10 segundos enquanto a janela estiver aberta e pelo botão **Atualizar**.
 O ícone preenche até a porcentagem lida e anima a mudança. Quando uma leitura
 real passa de menos de 100% para 100%, o app mostra **Carga completa** e envia
 uma notificação ao Ubuntu. Se a leitura falhar, o valor atual é ocultado; uma

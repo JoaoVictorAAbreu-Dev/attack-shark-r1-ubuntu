@@ -226,7 +226,7 @@ class Dashboard(Gtk.ApplicationWindow):
         self._build()
         self._connection_timer()
         GLib.timeout_add_seconds(2, self._connection_timer)
-        GLib.timeout_add_seconds(30, self._battery_timer)
+        GLib.timeout_add_seconds(10, self._battery_timer)
 
     def _build(self):
         values, self.config_warning = read_config()
