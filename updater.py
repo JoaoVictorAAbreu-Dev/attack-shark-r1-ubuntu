@@ -18,7 +18,7 @@ USER_AGENT = "attack-shark-r1-ubuntu-updater"
 def _get(url, maximum):
     if not url.startswith("https://"):
         raise ValueError("A atualização exige uma conexão HTTPS.")
-    request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/octet-stream"})
+    request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
     with urlopen(request, timeout=15) as response:
         if not response.geturl().startswith("https://"):
             raise ValueError("O servidor redirecionou a atualização para uma conexão insegura.")
