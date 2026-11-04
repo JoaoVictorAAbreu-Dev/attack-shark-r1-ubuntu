@@ -9,8 +9,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parent
 PROJECT = Path(os.environ.get("ATTACK_SHARK_OUTPUT_DIR", ROOT / "dist")).resolve()
 STAGE = ROOT / "deb-stage"
-VERSION = "0.4.2-1"
-PACKAGE = PROJECT / "attack-shark-r1_0.4.2_amd64.deb"
+VERSION = "0.5.0-1"
+PACKAGE = PROJECT / "attack-shark-r1_0.5.0_amd64.deb"
 
 
 def put(source, destination, mode):

@@ -36,50 +36,54 @@ DEFAULTS = {
 }
 
 CSS = """
-@define-color canvas #f4f7fc;
-@define-color ink #142039;
-@define-color muted #61708a;
-@define-color accent #245bd7;
-@define-color accent_hover #174dbd;
-@define-color field_border #dbe4f2;
-window { background: @canvas; color: @ink; font-family: Cantarell, sans-serif; }
-.page { background: linear-gradient(135deg, #f9fbff, #ecf2fb 65%, #f8fbff); }
-.brand { color: @muted; font-size: 11px; font-weight: 800; letter-spacing: 2px; }
-.heading { color: #15223a; font-size: 28px; font-weight: 800; }
-.subheading { color: @muted; font-size: 13px; }
-.glass { background: rgba(255, 255, 255, 0.86); border: 1px solid #ffffff;
-         border-radius: 24px; box-shadow: 0 12px 36px rgba(64, 86, 129, 0.10); }
-.hero { background: linear-gradient(155deg, rgba(255,255,255,0.98), rgba(228,237,252,0.80));
-        border: 1px solid #ffffff; border-radius: 28px;
-        box-shadow: 0 16px 45px rgba(61, 84, 124, 0.13); }
-.section-title { color: #1c2b47; font-size: 18px; font-weight: 800; }
-.section-note { color: #68758c; font-size: 12px; }
-.field-label { color: #3f4f69; font-size: 13px; font-weight: 600; }
-.eyebrow { color: #5871a8; font-size: 11px; font-weight: 800; letter-spacing: 1.4px; }
-.battery { color: #172b4c; font-size: 42px; font-weight: 800; }
-.status { color: #52627d; font-size: 12px; }
-.badge { background: #e8f0ff; color: #2457a6; border-radius: 999px;
-         padding: 8px 14px; font-size: 12px; font-weight: 700; }
-.badge-error { background: #fff0ed; color: #9d352e; }
-.profile-row { background: #f7f9fd; border: 1px solid #e8eef8; border-radius: 14px; padding: 7px 10px; }
-.profile-active { background: #eaf2ff; border-color: #91b8f2; }
-.number { color: #4972ae; font-size: 12px; font-weight: 800; }
-spinbutton, dropdown { background: #ffffff; color: #172b4c; border: 1px solid @field_border;
-                       border-radius: 10px; min-height: 34px; }
-spinbutton:focus-within, dropdown:focus { border-color: #2563eb; }
-.rate { background: #f2f5fb; color: #465771; border: 1px solid #e1e9f5;
-        border-radius: 10px; min-height: 40px; font-weight: 700; }
-.rate:checked { background: #dbe9ff; color: #174a9a; border-color: #9bc0f8; }
-.rate:focus, button:focus { outline: 2px solid #2563eb; outline-offset: 2px; }
-.primary { background: @accent; color: #ffffff; border-radius: 13px;
-           min-height: 46px; padding: 0 20px; font-weight: 800; }
-.primary:hover { background: @accent_hover; }
-.primary:disabled { background: #9aaccb; }
-.secondary { background: #eef4ff; color: #2155ad; border-radius: 11px;
-             min-height: 38px; padding: 0 12px; font-weight: 700; }
-.secondary:hover { background: #dfeaff; }
-.feedback { background: #eaf2ff; color: #174a87; border-radius: 12px; padding: 10px 14px; }
-.feedback-error { background: #fff0ed; color: #90322e; }
+@define-color page_bg #f5f6f7;
+@define-color surface #ffffff;
+@define-color ink #18232e;
+@define-color muted #485869;
+@define-color line #dce2e7;
+@define-color blue #254e84;
+window { background: @page_bg; color: @ink; font-family: Cantarell, sans-serif; }
+.app-shell, .page { background: @page_bg; }
+.topbar, .actionbar { background: @surface; border-color: @line; }
+.topbar { border-bottom: 1px solid @line; padding: 12px 28px; }
+.actionbar { border-top: 1px solid @line; padding: 14px 28px; }
+.brand-name { color: @ink; font-size: 17px; font-weight: 700; }
+.brand-detail, .muted, .section-note { color: @muted; font-size: 12px; }
+.page-title { color: @ink; font-size: 26px; font-weight: 700; }
+.section-title { color: @ink; font-size: 18px; font-weight: 700; }
+.field-label { color: @ink; font-size: 13px; font-weight: 600; }
+.eyebrow { color: @muted; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+.panel { background: @surface; border: 1px solid @line; border-radius: 12px; }
+.device-panel { background: #edf1f4; border: 1px solid #dce3e8; border-radius: 12px; }
+.divider { background: @line; min-height: 1px; }
+.product-name { color: @ink; font-size: 18px; font-weight: 700; }
+.battery { color: @ink; font-size: 31px; font-weight: 700; }
+.badge { background: #e8f3ed; color: #185b38; border: 1px solid #b8d8c3;
+         border-radius: 7px; padding: 7px 11px; font-size: 12px; font-weight: 700; }
+.badge-error { background: #fff0ed; color: #94342e; border-color: #e8bdb8; }
+.profile-row { border-bottom: 1px solid #e8ecef; padding: 6px 10px; }
+.profile-active { background: #ebf2fb; border-radius: 6px; }
+.number { color: #586b7e; font-size: 12px; font-weight: 700; }
+spinbutton, spinbutton text, dropdown, dropdown button { background: @surface; color: @ink;
+    border: 1px solid #8699aa; border-radius: 6px; min-height: 36px; }
+spinbutton button { background: #f6f8fa; color: @ink; }
+spinbutton:focus-within, dropdown:focus { border-color: @blue; }
+button.rate { background: @surface; color: @ink; border: 1px solid #8699aa;
+              border-radius: 6px; min-height: 38px; font-weight: 600; }
+button.rate:checked { background: @blue; color: #ffffff; border-color: @blue; }
+button.rate:checked label { color: #ffffff; }
+button.rate:focus, button:focus, spinbutton:focus-within, dropdown:focus { outline: 2px solid @blue; outline-offset: 2px; }
+button.primary { background: #1c354d; color: #ffffff; border-radius: 7px;
+                 min-height: 42px; padding: 0 20px; font-weight: 700; }
+button.primary label { color: #ffffff; }
+button.primary:hover { background: #294b69; }
+button.primary:disabled { background: #7d8d9d; }
+button.secondary { background: @surface; color: @ink; border: 1px solid #8699aa;
+                   border-radius: 7px; min-height: 36px; padding: 0 12px; font-weight: 600; }
+button.secondary:hover { background: #eef2f5; }
+button.secondary label { color: @ink; }
+.feedback { color: #304355; font-size: 12px; }
+.feedback-error { color: #9b3931; }
 """
 
 
@@ -92,6 +96,15 @@ def css(widget, *names):
 def label(text, *classes):
     widget = Gtk.Label(label=text, xalign=0)
     return css(widget, *classes)
+
+
+def picture(path, width, height, description):
+    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path), width, height, True)
+    widget = Gtk.Picture.new_for_paintable(Gdk.Texture.new_for_pixbuf(pixbuf))
+    widget.set_alternative_text(description)
+    widget.set_content_fit(Gtk.ContentFit.CONTAIN)
+    widget.set_size_request(width, height)
+    return widget
 
 
 def read_config():
@@ -158,6 +171,7 @@ class Dashboard(Gtk.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Attack Shark R1")
         self.set_default_size(1160, 760)
+        self.set_size_request(680, 520)
         self.set_icon_name("attack-shark-r1")
         self.busy = False
         self.update_busy = False
@@ -167,120 +181,145 @@ class Dashboard(Gtk.ApplicationWindow):
         GLib.idle_add(self.refresh_battery)
 
     def _build(self):
-        values, config_warning = read_config()
-        self.config_warning = config_warning
+        values, self.config_warning = read_config()
         provider = Gtk.CssProvider()
         provider.load_from_data(CSS.encode())
         Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_USER
         )
-        scroll = Gtk.ScrolledWindow()
-        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.set_child(scroll)
-        page = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=22), "page")
-        page.set_margin_top(28)
-        page.set_margin_bottom(28)
-        page.set_margin_start(28)
-        page.set_margin_end(28)
-        scroll.set_child(page)
 
-        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-        logo_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(APP_ICON), 56, 56, True)
-        logo = Gtk.Picture.new_for_pixbuf(logo_pixbuf)
-        logo.set_alternative_text("Ícone Attack Shark")
-        logo.set_size_request(56, 56)
+        shell = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL), "app-shell")
+        self.set_child(shell)
+
+        header = css(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12), "topbar")
+        shell.append(header)
+        logo = picture(APP_ICON, 44, 44, "Ícone Attack Shark")
         logo.set_valign(Gtk.Align.CENTER)
         header.append(logo)
-        titles = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        titles.append(label("ATTACK SHARK  /  CONTROLE DO MOUSE", "brand"))
-        titles.append(label("Seu R1, do seu jeito.", "heading"))
-        titles.append(label("Ajuste a sensibilidade e a resposta do mouse.", "subheading"))
-        header.append(titles)
-        spacer = Gtk.Box()
-        spacer.set_hexpand(True)
-        header.append(spacer)
+        identity = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        identity.append(label("Attack Shark R1", "brand-name"))
+        identity.append(label("Configuração do mouse", "brand-detail"))
+        header.append(identity)
+        space = Gtk.Box()
+        space.set_hexpand(True)
+        header.append(space)
+        self.device_badge = label("Verificando conexão", "badge")
+        self.device_badge.set_valign(Gtk.Align.CENTER)
+        header.append(self.device_badge)
         self.update_button = css(Gtk.Button(label="Verificar atualizações"), "secondary")
         self.update_button.set_valign(Gtk.Align.CENTER)
         self.update_button.connect("clicked", self.check_updates)
         header.append(self.update_button)
-        self.device_badge = label("Verificando conexão", "badge")
-        self.device_badge.set_valign(Gtk.Align.CENTER)
-        header.append(self.device_badge)
-        page.append(header)
 
-        cards = Gtk.FlowBox()
-        cards.set_selection_mode(Gtk.SelectionMode.NONE)
-        cards.set_halign(Gtk.Align.CENTER)
-        cards.set_column_spacing(18)
-        cards.set_row_spacing(18)
-        cards.set_min_children_per_line(1)
-        cards.set_max_children_per_line(3)
-        page.append(cards)
-        cards.insert(self._dpi_card(values), -1)
-        cards.insert(self._hero_card(), -1)
-        cards.insert(self._status_card(values), -1)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_vexpand(True)
+        shell.append(scroll)
+        page = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18), "page")
+        page.set_margin_top(24)
+        page.set_margin_bottom(24)
+        page.set_margin_start(24)
+        page.set_margin_end(24)
+        scroll.set_child(page)
+        intro = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        intro.append(label("Configurações", "page-title"))
+        intro.append(label("Ajuste os perfis de DPI e a taxa USB do R1.", "muted"))
+        page.append(intro)
 
-        footer = css(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18), "glass")
-        footer.set_margin_top(2)
-        footer.set_margin_bottom(2)
-        footer.set_margin_start(2)
-        footer.set_margin_end(2)
-        footer.set_size_request(-1, 78)
-        footer.set_valign(Gtk.Align.CENTER)
-        footer_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-        footer_text.set_margin_start(20)
-        footer_text.append(label("Pronto para configurar?", "section-title"))
-        footer_text.append(label("Os ajustes só são enviados quando você clica em Aplicar.", "section-note"))
-        footer.append(footer_text)
-        filler = Gtk.Box()
-        filler.set_hexpand(True)
-        footer.append(filler)
+        columns = Gtk.FlowBox()
+        columns.set_selection_mode(Gtk.SelectionMode.NONE)
+        columns.set_halign(Gtk.Align.CENTER)
+        columns.set_column_spacing(18)
+        columns.set_row_spacing(18)
+        columns.set_min_children_per_line(1)
+        columns.set_max_children_per_line(2)
+        columns.insert(self._device_panel(), -1)
+        columns.insert(self._settings_panel(values), -1)
+        page.append(columns)
+
+        footer = css(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24), "actionbar")
+        shell.append(footer)
+        self.feedback = label(
+            self.config_warning or "Escolha os ajustes e clique em Aplicar ao mouse.", "feedback"
+        )
+        self.feedback.set_hexpand(True)
+        self.feedback.set_wrap(True)
+        if self.config_warning:
+            self.feedback.add_css_class("feedback-error")
+        footer.append(self.feedback)
         self.apply_button = css(Gtk.Button(label="Aplicar ao mouse"), "primary")
         self.apply_button.set_valign(Gtk.Align.CENTER)
-        self.apply_button.set_margin_end(20)
         self.apply_button.connect("clicked", self.apply)
         footer.append(self.apply_button)
-        page.append(footer)
 
-        self.feedback = label(
-            config_warning or "Pronto. Escolha os ajustes e clique em Aplicar ao mouse.", "feedback"
-        )
-        self.feedback.set_wrap(True)
-        if config_warning:
-            self.feedback.add_css_class("feedback-error")
-        page.append(self.feedback)
-
-    def _dpi_card(self, values):
-        card = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12), "glass")
-        card.set_size_request(270, 526)
-        card.set_margin_top(4)
-        card.set_margin_bottom(4)
-        card.set_margin_start(4)
-        card.set_margin_end(4)
+    def _device_panel(self):
+        panel = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0), "device-panel")
+        panel.set_size_request(300, 500)
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        inner.set_margin_top(22)
-        inner.set_margin_bottom(22)
+        inner.set_margin_top(20)
+        inner.set_margin_bottom(20)
         inner.set_margin_start(20)
         inner.set_margin_end(20)
-        card.append(inner)
-        inner.append(label("SENSIBILIDADE", "eyebrow"))
-        inner.append(label("Perfis de DPI", "section-title"))
-        inner.append(label("Seis níveis entre 100 e 18.000 DPI.", "section-note"))
+        panel.append(inner)
+        inner.append(label("DISPOSITIVO  /  R1", "eyebrow"))
+        art = picture(MOUSE_IMAGE, 260, 278, "Mouse Attack Shark R1 preto visto de cima")
+        art.set_halign(Gtk.Align.CENTER)
+        inner.append(art)
+        inner.append(label("Attack Shark R1", "product-name"))
+        inner.append(label("USB ou receptor 2,4 GHz", "muted"))
+        divider = css(Gtk.Box(), "divider")
+        divider.set_margin_top(10)
+        divider.set_margin_bottom(4)
+        inner.append(divider)
+        battery_line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        battery_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        battery_text.set_hexpand(True)
+        battery_text.append(label("BATERIA", "eyebrow"))
+        self.battery_value = label("—", "battery")
+        battery_text.append(self.battery_value)
+        battery_line.append(battery_text)
+        self.battery_button = css(Gtk.Button(label="Atualizar"), "secondary")
+        self.battery_button.set_tooltip_text("Consultar a bateria do R1")
+        self.battery_button.set_valign(Gtk.Align.END)
+        self.battery_button.connect("clicked", self.refresh_battery)
+        battery_line.append(self.battery_button)
+        inner.append(battery_line)
+        self.battery_note = label("Aguardando leitura", "section-note")
+        inner.append(self.battery_note)
+        return panel
+
+    def _settings_panel(self, values):
+        panel = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL), "panel")
+        panel.set_size_request(600, 500)
+        panel.set_hexpand(True)
+        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        inner.set_margin_top(22)
+        inner.set_margin_bottom(22)
+        inner.set_margin_start(24)
+        inner.set_margin_end(24)
+        panel.append(inner)
+        inner.append(label("Sensibilidade", "section-title"))
+        inner.append(label("Seis perfis · 100 a 18.000 DPI, em passos de 100.", "section-note"))
+
         self.dpi_spins = []
         self.dpi_rows = []
         dpis = values["dpis"].split()
         if len(dpis) != 6:
             dpis = DEFAULTS["dpis"].split()
         for index, item in enumerate(dpis):
-            row = css(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8), "profile-row")
-            row.append(label(f"{index + 1:02d}", "number"))
+            row = css(Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10), "profile-row")
+            row.set_size_request(-1, 43)
+            number = label(f"{index + 1:02d}", "number")
+            number.set_size_request(26, -1)
+            row.append(number)
             row_text = label(f"Perfil {index + 1}", "field-label")
             row_text.set_hexpand(True)
             row.append(row_text)
             spin = Gtk.SpinButton.new_with_range(100, 18000, 100)
             spin.set_numeric(True)
             spin.set_snap_to_ticks(True)
-            spin.set_width_chars(6)
+            spin.set_width_chars(5)
+            spin.set_size_request(122, -1)
             try:
                 spin.set_value(int(item))
             except ValueError:
@@ -290,114 +329,51 @@ class Dashboard(Gtk.ApplicationWindow):
             self.dpi_spins.append(spin)
             self.dpi_rows.append(row)
             inner.append(row)
-        inner.append(label("Perfil ativo", "field-label"))
-        self.stage_dropdown = Gtk.DropDown.new_from_strings(
-            [f"Perfil {i}" for i in range(1, 7)]
-        )
+
+        profile_line = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        profile_line.set_margin_top(8)
+        profile_label = label("Perfil ativo", "field-label")
+        profile_label.set_hexpand(True)
+        profile_line.append(profile_label)
+        self.stage_dropdown = Gtk.DropDown.new_from_strings([f"Perfil {i}" for i in range(1, 7)])
+        self.stage_dropdown.set_size_request(160, -1)
         try:
             selected = max(0, min(5, int(values["active_dpi"]) - 1))
         except ValueError:
             selected = 2
         self.stage_dropdown.set_selected(selected)
         self.stage_dropdown.connect("notify::selected", self._stage_changed)
-        inner.append(self.stage_dropdown)
+        profile_line.append(self.stage_dropdown)
+        inner.append(profile_line)
         self._stage_changed()
-        note = label("Seleção nesta tela. O mouse não informa seu perfil atual.", "section-note")
+        note = label("A seleção é salva ao aplicar; o R1 não informa o perfil atual.", "section-note")
         note.set_wrap(True)
-        note.set_max_width_chars(30)
         inner.append(note)
-        return card
 
-    def _hero_card(self):
-        card = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8), "hero")
-        card.set_size_request(380, 526)
-        card.set_margin_top(4)
-        card.set_margin_bottom(4)
-        card.set_margin_start(4)
-        card.set_margin_end(4)
-        card.set_halign(Gtk.Align.CENTER)
-        title = label("R1  /  USB + 2,4 GHZ", "eyebrow")
-        title.set_margin_top(24)
-        title.set_margin_start(24)
-        card.append(title)
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(MOUSE_IMAGE), 350, 350, True)
-        art = Gtk.Picture.new_for_pixbuf(pixbuf)
-        art.set_alternative_text("Mouse Attack Shark R1 preto visto de cima")
-        art.set_content_fit(Gtk.ContentFit.CONTAIN)
-        art.set_size_request(350, 400)
-        art.set_halign(Gtk.Align.CENTER)
-        art.set_vexpand(True)
-        card.append(art)
-        caption = label("ATTACK SHARK R1", "section-title")
-        caption.set_halign(Gtk.Align.CENTER)
-        caption.set_margin_bottom(24)
-        card.append(caption)
-        return card
-
-    def _status_card(self, values):
-        side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        side.set_size_request(270, 526)
-        side.set_margin_top(4)
-        side.set_margin_bottom(4)
-        side.set_margin_start(4)
-        side.set_margin_end(4)
-        battery = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9), "glass")
-        battery.set_size_request(270, 225)
-        battery.set_margin_top(2)
-        battery.set_margin_bottom(2)
-        battery.set_margin_start(2)
-        battery.set_margin_end(2)
-        battery.append(self._inset(label("ENERGIA", "eyebrow"), top=20))
-        battery.append(self._inset(label("Bateria", "section-title")))
-        self.battery_value = label("—", "battery")
-        battery.append(self._inset(self.battery_value))
-        self.battery_note = label("Aguardando leitura", "section-note")
-        battery.append(self._inset(self.battery_note))
-        self.battery_button = css(Gtk.Button(label="Atualizar bateria"), "secondary")
-        self.battery_button.set_margin_start(18)
-        self.battery_button.set_margin_end(18)
-        self.battery_button.set_margin_bottom(18)
-        self.battery_button.connect("clicked", self.refresh_battery)
-        battery.append(self.battery_button)
-        side.append(battery)
-
-        polling = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=13), "glass")
-        polling.set_size_request(270, 280)
-        polling.set_margin_top(2)
-        polling.set_margin_bottom(2)
-        polling.set_margin_start(2)
-        polling.set_margin_end(2)
-        polling.append(self._inset(label("RESPOSTA", "eyebrow"), top=20))
-        polling.append(self._inset(label("Taxa de atualização", "section-title")))
-        polling.append(self._inset(label("Selecione a frequência USB.", "section-note")))
-        rate_grid = Gtk.Grid(column_spacing=8, row_spacing=8)
-        rate_grid.set_margin_start(18)
-        rate_grid.set_margin_end(18)
+        divider = css(Gtk.Box(), "divider")
+        divider.set_margin_top(10)
+        divider.set_margin_bottom(10)
+        inner.append(divider)
+        inner.append(label("Taxa USB", "section-title"))
+        inner.append(label("Escolha a frequência de resposta do mouse.", "section-note"))
+        rates = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        rates.set_margin_top(5)
         self.rate_buttons = {}
         try:
             self.rate = int(values["polling_rate"])
         except ValueError:
             self.rate = 1000
-        for index, rate in enumerate((125, 250, 500, 1000)):
+        for rate in (125, 250, 500, 1000):
             button = css(Gtk.ToggleButton(label=f"{rate} Hz"), "rate")
             button.set_hexpand(True)
             button.connect("toggled", self._rate_toggled, rate)
             if self.rate_buttons:
                 button.set_group(next(iter(self.rate_buttons.values())))
             self.rate_buttons[rate] = button
-            rate_grid.attach(button, index % 2, index // 2, 1, 1)
+            rates.append(button)
         self.rate_buttons.get(self.rate, self.rate_buttons[1000]).set_active(True)
-        polling.append(rate_grid)
-        polling.append(self._inset(label("Taxas disponíveis: 125, 250, 500 e 1000 Hz.", "section-note")))
-        side.append(polling)
-        return side
-
-    @staticmethod
-    def _inset(widget, top=0):
-        widget.set_margin_start(18)
-        widget.set_margin_end(18)
-        widget.set_margin_top(top)
-        return widget
+        inner.append(rates)
+        return panel
 
     def _rate_toggled(self, button, rate):
         if button.get_active():
