@@ -16,6 +16,7 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk
 from updater import download_release, install_package, installed_version, is_newer, latest_release
+from usb_presence import scan_usb_modes
 
 
 APP_ID = "org.local.AttackSharkR1"
@@ -132,8 +133,7 @@ def read_config():
     return values, None
 
 
-def save_config(rate, stage, dpis):
-    CONFIG.parent.mkdir(parents=True, exist_ok=True)
+def render_config(rate, stage, dpis):
     existing = CONFIG.read_text(encoding="utf-8") if CONFIG.exists() else ""
     changed = {"polling_rate", "active_dpi", "dpis"}
     lines = [
@@ -149,6 +149,12 @@ def save_config(rate, stage, dpis):
         f"active_dpi = {stage}",
         "dpis = " + " ".join(map(str, dpis)),
     ]
+    return "\n".join(lines) + "\n"
+
+
+def save_config(rate, stage, dpis):
+    CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    content = render_config(rate, stage, dpis)
     temp = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -157,7 +163,7 @@ def save_config(rate, stage, dpis):
         ) as file:
             temp = Path(file.name)
             os.fchmod(file.fileno(), 0o600)
-            file.write("\n".join(lines) + "\n")
+            file.write(content)
         os.replace(temp, CONFIG)
     finally:
         if temp is not None:
@@ -203,6 +209,9 @@ class Dashboard(Gtk.ApplicationWindow):
         self.set_icon_name("attack-shark-r1")
         self.busy = False
         self.battery_busy = False
+        self.device_ready = False
+        self.present_modes = object()
+        self.connection_generation = 0
         self.device_lock = Lock()
         self.battery_percentage = None
         self.battery_display = 0.0
@@ -215,7 +224,8 @@ class Dashboard(Gtk.ApplicationWindow):
         self.available_release = None
         self.rate = 1000
         self._build()
-        GLib.idle_add(self.refresh_battery)
+        self._connection_timer()
+        GLib.timeout_add_seconds(2, self._connection_timer)
         GLib.timeout_add_seconds(30, self._battery_timer)
 
     def _build(self):
@@ -288,6 +298,7 @@ class Dashboard(Gtk.ApplicationWindow):
         self.apply_button = css(Gtk.Button(label="Aplicar ao mouse"), "primary")
         self.apply_button.set_valign(Gtk.Align.CENTER)
         self.apply_button.connect("clicked", self.apply)
+        self.apply_button.set_sensitive(False)
         footer.append(self.apply_button)
 
     def _device_panel(self):
@@ -486,6 +497,44 @@ class Dashboard(Gtk.ApplicationWindow):
         self.refresh_battery(silent=True)
         return True
 
+    def _set_presence(self, modes):
+        self.present_modes = modes
+        self.connection_generation += 1
+        self.device_ready = False
+        self.battery_busy = False
+        self.battery_charging = None
+        self.full_notified = False
+        self.last_battery_time = None
+        self._clear_battery()
+        self.battery_value.set_text("—")
+        self.battery_state.remove_css_class("battery-full")
+        self.battery_state.add_css_class("battery-unknown")
+        self.device_badge.remove_css_class("badge-error")
+        if modes == frozenset():
+            self.device_badge.set_text("R1 desconectado")
+            self.device_badge.add_css_class("badge-error")
+            self.battery_state.set_text("Desconectado")
+            self.battery_note.set_text("Conecte o cabo ou o receptor 2,4 GHz.")
+            self._message("R1 desconectado. Conecte-o para aplicar ajustes.", error=True)
+        elif modes is None:
+            self.device_badge.set_text("Verificando conexão")
+            self.battery_state.set_text("Leitura indisponível")
+            self.battery_note.set_text("Não foi possível verificar a conexão USB.")
+        else:
+            self.device_badge.set_text("Cabo e receptor detectados" if len(modes) == 2 else
+                                       "Cabo detectado" if "wired" in modes else "Receptor detectado")
+            self.battery_state.set_text("Verificando mouse")
+            self.battery_note.set_text("Consultando o R1...")
+        self._set_busy(self.busy)
+
+    def _connection_timer(self):
+        modes = scan_usb_modes()
+        if modes != self.present_modes:
+            self._set_presence(modes)
+            if modes is None or modes:
+                self.refresh_battery(silent=True)
+        return True
+
     def _rate_toggled(self, button, rate):
         if button.get_active():
             self.rate = rate
@@ -510,8 +559,10 @@ class Dashboard(Gtk.ApplicationWindow):
 
     def _set_busy(self, busy):
         self.busy = busy
-        self.apply_button.set_sensitive(not busy)
-        self.battery_button.set_sensitive(not busy and not self.battery_busy)
+        self.apply_button.set_sensitive(not busy and self.device_ready)
+        self.battery_button.set_sensitive(
+            not busy and not self.battery_busy and self.present_modes != frozenset()
+        )
 
     def check_updates(self, *_):
         if self.update_busy:
@@ -568,6 +619,11 @@ class Dashboard(Gtk.ApplicationWindow):
         return False
 
     def refresh_battery(self, *_, silent=False):
+        modes = scan_usb_modes()
+        if modes != self.present_modes:
+            self._set_presence(modes)
+        if modes == frozenset():
+            return False
         if self.busy or self.battery_busy:
             return False
         self.battery_busy = True
@@ -575,28 +631,43 @@ class Dashboard(Gtk.ApplicationWindow):
         if not silent:
             self.battery_note.set_text("Consultando...")
             self._message("Consultando a bateria do R1...")
-        Thread(target=self._battery_worker, args=(silent,), daemon=True).start()
+        Thread(target=self._battery_worker, args=(silent, self.connection_generation), daemon=True).start()
         return False
 
-    def _battery_worker(self, silent):
+    def _battery_worker(self, silent, generation):
         try:
             with self.device_lock:
                 result = subprocess.run(
                     [str(DRIVER), "--battery-status"], capture_output=True, text=True, timeout=8
                 )
-            GLib.idle_add(self._battery_finished, result.returncode, result.stdout, result.stderr, silent)
+            GLib.idle_add(self._battery_finished, result.returncode, result.stdout, result.stderr, silent, generation)
         except (OSError, subprocess.TimeoutExpired) as error:
-            GLib.idle_add(self._battery_finished, 1, "", str(error), silent)
+            GLib.idle_add(self._battery_finished, 1, "", str(error), silent, generation)
 
-    def _battery_finished(self, code, output, error, silent=False):
+    def _battery_finished(self, code, output, error, silent=False, generation=None):
+        if generation is not None and generation != self.connection_generation:
+            return False
+        modes = scan_usb_modes()
+        if modes != self.present_modes:
+            self._set_presence(modes)
+            if modes is None or modes:
+                self.refresh_battery(silent=True)
+            return False
         self.battery_busy = False
-        self.battery_button.set_sensitive(not self.busy)
+        self._set_busy(self.busy)
         if code == 0:
             try:
                 value, charging, wired = parse_battery_status(output)
             except ValueError as problem:
                 code, error = 1, str(problem)
             else:
+                if modes is not None and ((wired and "wired" not in modes) or
+                                              (not wired and "receiver" not in modes)):
+                    self._set_presence(modes)
+                    self.refresh_battery(silent=True)
+                    return False
+                self.device_ready = True
+                self._set_busy(self.busy)
                 self.battery_wired = wired
                 self.device_badge.set_text("R1 por cabo" if wired else "R1 conectado")
                 self.device_badge.remove_css_class("badge-error")
@@ -638,21 +709,29 @@ class Dashboard(Gtk.ApplicationWindow):
                 return False
         if code != 0:
             timeout = "Operation timed out" in error or "Timeout" in error
-            if not (timeout and self.battery_percentage is not None):
-                self._clear_battery()
-                self.battery_value.set_text("—")
+            previous = self.battery_percentage
+            previous_time = self.last_battery_time
+            self.device_ready = False
+            self._set_busy(self.busy)
+            self._clear_battery()
+            self.battery_value.set_text("—")
             self.battery_state.remove_css_class("battery-full")
             self.battery_state.add_css_class("battery-unknown")
-            self.battery_state.set_text("Última leitura" if timeout and self.battery_percentage is not None else "Leitura indisponível")
+            self.battery_state.set_text("Mouse sem resposta" if timeout else "Leitura indisponível")
             self.battery_note.set_text(
-                ("Sem resposta agora · " + self.last_battery_time) if timeout and self.last_battery_time
-                else "Verifique a conexão e tente novamente."
+                f"Última leitura: {previous}% às {previous_time}. Mova o mouse e atualize."
+                if timeout and previous is not None and previous_time else
+                "Mova o mouse e tente atualizar." if timeout else
+                "Verifique a conexão e tente novamente."
             )
             if timeout:
-                self.device_badge.set_text("R1 detectado")
-                self.device_badge.remove_css_class("badge-error")
+                self.device_badge.set_text("Receptor sem resposta" if modes and "receiver" in modes and "wired" not in modes
+                                           else "Cabo sem resposta" if modes and "wired" in modes
+                                           else "Conexão sem resposta")
+                self.device_badge.add_css_class("badge-error")
             else:
-                self.device_badge.set_text("Conexão indisponível")
+                self.device_badge.set_text("Sem permissão" if "Access denied" in error or "insufficient permissions" in error
+                                           else "Conexão indisponível")
                 self.device_badge.add_css_class("badge-error")
             if not silent:
                 self._message(friendly_error(error), error=True)
@@ -661,41 +740,61 @@ class Dashboard(Gtk.ApplicationWindow):
     def apply(self, *_):
         if self.busy:
             return
+        if not self.device_ready or scan_usb_modes() == frozenset():
+            self._connection_timer()
+            self._message("Conecte o R1 e aguarde a confirmação antes de aplicar ajustes.", error=True)
+            return
         dpis = [int(round(spin.get_value())) for spin in self.dpi_spins]
         if any(dpi < 100 or dpi > 18000 or dpi % 100 for dpi in dpis):
             self._message("Cada DPI deve ser múltiplo de 100, entre 100 e 18.000.", error=True)
             return
         stage = self.stage_dropdown.get_selected() + 1
         self._set_busy(True)
-        self._message("Salvando e enviando configuração ao R1...")
-        Thread(target=self._apply_worker, args=(self.rate, stage, dpis), daemon=True).start()
+        self._message("Enviando configuração ao R1...")
+        Thread(target=self._apply_worker, args=(self.rate, stage, dpis, self.present_modes), daemon=True).start()
 
-    def _apply_worker(self, rate, stage, dpis):
+    def _apply_worker(self, rate, stage, dpis, start_modes=None):
         try:
-            save_config(rate, stage, dpis)
+            content = render_config(rate, stage, dpis)
         except (OSError, UnicodeError) as error:
-            GLib.idle_add(self._apply_finished, False, f"Não foi possível salvar: {error}")
+            GLib.idle_add(self._apply_finished, False, f"Não foi possível preparar a configuração: {error}")
             return
         try:
-            with self.device_lock:
-                result = subprocess.run(
-                    [str(DRIVER), "--apply-config"], capture_output=True, text=True, timeout=12
-                )
+            with tempfile.TemporaryDirectory(prefix="attack-shark-r1-") as directory:
+                path = Path(directory) / "attack-shark-r1.ini"
+                path.write_text(content, encoding="utf-8")
+                path.chmod(0o600)
+                with self.device_lock:
+                    result = subprocess.run(
+                        [str(DRIVER), "--apply-config", str(path)],
+                        capture_output=True, text=True, timeout=12,
+                    )
             if result.returncode == 0:
-                GLib.idle_add(self._apply_finished, True, "Comandos enviados ao R1. O dispositivo não oferece leitura de confirmação.")
+                if start_modes is not None and scan_usb_modes() != start_modes:
+                    GLib.idle_add(self._apply_finished, False,
+                                  "A conexão mudou durante o envio. Perfil anterior preservado; alguns ajustes podem ter sido aplicados.")
+                    return
+                try:
+                    save_config(rate, stage, dpis)
+                except (OSError, UnicodeError) as error:
+                    GLib.idle_add(self._apply_finished, False,
+                                  f"Comandos enviados, mas não foi possível salvar o perfil: {error}")
+                else:
+                    GLib.idle_add(self._apply_finished, True,
+                                  "Comandos enviados ao R1 e perfil salvo. O dispositivo não oferece leitura de confirmação.")
             else:
                 GLib.idle_add(
                     self._apply_finished, False,
-                    "Configuração salva, mas aplicação não confirmada. " + friendly_error(result.stderr, "apply"),
+                    "Perfil anterior preservado. Aplicação não confirmada: " + friendly_error(result.stderr, "apply"),
                 )
         except (OSError, subprocess.TimeoutExpired) as error:
             GLib.idle_add(
-                self._apply_finished, False, f"Configuração salva, mas aplicação não confirmada: {error}"
+                self._apply_finished, False, f"Perfil anterior preservado. Aplicação não confirmada: {error}"
             )
 
     def _apply_finished(self, success, message):
         self._set_busy(False)
-        if not message.startswith("Não foi possível salvar:"):
+        if success:
             self.config_warning = None
         self._message(message, error=not success)
         return False

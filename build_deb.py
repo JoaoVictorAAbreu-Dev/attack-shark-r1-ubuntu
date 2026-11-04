@@ -9,8 +9,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parent
 PROJECT = Path(os.environ.get("ATTACK_SHARK_OUTPUT_DIR", ROOT / "dist")).resolve()
 STAGE = ROOT / "deb-stage"
-VERSION = "0.6.0-1"
-PACKAGE = PROJECT / "attack-shark-r1_0.6.0_amd64.deb"
+VERSION = "0.7.0-1"
+PACKAGE = PROJECT / "attack-shark-r1_0.7.0_amd64.deb"
 
 
 def put(source, destination, mode):
@@ -39,6 +39,7 @@ def main():
     STAGE.mkdir(parents=True)
     project_dir = STAGE / "usr/lib/attack-shark-r1"
     put(ROOT / "app_gtk.py", project_dir / "app_gtk.py", 0o644)
+    put(ROOT / "usb_presence.py", project_dir / "usb_presence.py", 0o644)
     put(ROOT / "updater.py", project_dir / "updater.py", 0o644)
     put(ROOT / "attack-shark-r1", project_dir / "attack-shark-r1", 0o755)
     put(ROOT / "mouse.png", project_dir / "mouse.png", 0o644)

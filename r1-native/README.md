@@ -8,8 +8,8 @@ By default, the build produces a 323 KB daemon that monitors battery level and c
 
 - **Battery daemon (default).** Reads battery percentage and charging state every 5 seconds. Updates the kernel power supply interface through `/dev/uhid`.
 - **Desktop integration.** Shows up in KDE Plasma system tray and Waybar through their standard UPower backends.
-- **Direct query.** `attack-shark-r1 -query-charge` prints the battery number for shell scripts.
-- **Desktop status query.** `attack-shark-r1 --battery-status` prints JSON with percentage, charging state, and connection mode. The wired transport cannot read actual charge, so percentage and charging are `null` in this output.
+- **Direct query.** `attack-shark-r1 -query-charge` prints the battery number for shell scripts when the wireless receiver reports it; wired USB has no verified charge report and returns an error.
+- **Desktop status query.** `attack-shark-r1 --battery-status` prints JSON with percentage, charging state, and connection mode. The wired transport cannot read actual charge, so percentage and charging are `null` in this output. The daemon does not create a synthetic 100% UPower battery for wired USB.
 - **Hardware tuning (optional).** Compile with `--features tuning` to configure DPI stages, polling rate, sleep timers, and debouncing from an INI file.
 
 ## Build and install

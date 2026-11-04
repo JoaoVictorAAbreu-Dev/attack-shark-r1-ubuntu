@@ -18,13 +18,10 @@ pub const REGISTER_DPI: u8 = 0x04;
 pub const REGISTER_SLEEP_TIMES: u8 = 0x05;
 pub const REGISTER_POLLING_RATE: u8 = 0x06;
 
-pub const DEVICE_ID_ATTACK_SHARK_R1: u8 = 0x10;
-pub const BATTERY_STATUS_READY: u8 = 0x40;
 pub const BATTERY_FLAG_DISCHARGING: u8 = 0x01;
 pub const BATTERY_FLAG_CHARGING_WIRED: u8 = 0x02;
 pub const BATTERY_FLAG_CHARGING_WIRELESS: u8 = 0x03;
 pub const BATTERY_FLAG_CHARGING_DOCK: u8 = 0x80;
-pub const BATTERY_MAX_TENTHS: u8 = 10;
 pub const MIN_BATTERY_REPORT_LEN: usize = 5;
 pub const INTERRUPT_BUFFER_LEN: usize = 64;
 
@@ -195,17 +192,10 @@ impl RegisterInterface for UsbTransport {
                         )));
                     }
                 } else {
-                    // Verify that the wired USB mouse is still physically connected.
                     self.check_liveness(TIMEOUT_WIRED_LIVENESS)?;
-
-                    data.fill(0);
-                    if data.len() >= MIN_BATTERY_REPORT_LEN {
-                        data[0] = REGISTER_BATTERY;
-                        data[1] = DEVICE_ID_ATTACK_SHARK_R1;
-                        data[2] = BATTERY_STATUS_READY;
-                        data[3] = BATTERY_FLAG_CHARGING_WIRED;
-                        data[4] = BATTERY_MAX_TENTHS;
-                    }
+                    return Err(DriverError::Protocol(
+                        "Wired R1 does not provide a battery charge report".to_owned(),
+                    ));
                 }
                 Ok(())
             }

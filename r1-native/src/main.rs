@@ -1,5 +1,7 @@
 use std::process::ExitCode;
 use std::time::Duration;
+#[cfg(feature = "config")]
+use std::path::PathBuf;
 
 #[cfg(feature = "config")]
 use attack_shark_r1::MouseConfig;
@@ -30,8 +32,7 @@ fn is_help_arg(arg: &str) -> bool {
 }
 
 fn battery_status_json(status: &BatteryStatus) -> String {
-    // The current wired transport fabricates 100% and a charging flag instead
-    // of reading the actual charge level, so neither value is trustworthy.
+    // Wired USB has no verified battery report; these values remain unknown.
     let percentage = if status.is_wired {
         "null".to_owned()
     } else {
@@ -55,7 +56,12 @@ fn main() -> ExitCode {
 
     #[cfg(feature = "config")]
     if args.iter().any(|a| a == CLI_FLAG_APPLY_CONFIG) {
-        let Some(path) = MouseConfig::find_config_file(None) else {
+        let custom_path = args.iter().position(|arg| arg == CLI_FLAG_APPLY_CONFIG)
+            .and_then(|index| args.get(index + 1))
+            .filter(|value| !value.starts_with('-'));
+        let path = custom_path.map(PathBuf::from)
+            .or_else(|| MouseConfig::find_config_file(None));
+        let Some(path) = path.filter(|path| path.is_file()) else {
             eprintln!("No attack-shark-r1.ini configuration file found.");
             return ExitCode::FAILURE;
         };
@@ -87,6 +93,16 @@ fn main() -> ExitCode {
 
     if args.iter().any(|a| a == CLI_FLAG_BATTERY_STATUS) {
         match AttackSharkR1::open() {
+            Ok(mut mouse) if mouse.is_wired() => match mouse.check_connection() {
+                Ok(()) => {
+                    println!("{{\"percentage\":null,\"charging\":null,\"wired\":true}}");
+                    return ExitCode::SUCCESS;
+                }
+                Err(error) => {
+                    eprintln!("Error checking mouse connection: {error}");
+                    return ExitCode::FAILURE;
+                }
+            },
             Ok(mut mouse) => match mouse.get_battery_status() {
                 Ok(status) => {
                     println!("{}", battery_status_json(&status));
@@ -132,7 +148,7 @@ fn main() -> ExitCode {
         println!("  attack-shark-r1 {CLI_FLAG_QUERY_CHARGE}  # Print battery percentage");
         println!("  attack-shark-r1 {CLI_FLAG_BATTERY_STATUS}  # Print battery JSON; wired level is unknown");
         #[cfg(feature = "config")]
-        println!("  attack-shark-r1 {CLI_FLAG_APPLY_CONFIG}  # Apply settings once");
+        println!("  attack-shark-r1 {CLI_FLAG_APPLY_CONFIG} [path]  # Apply settings once");
         println!("  attack-shark-r1 {CLI_FLAG_HELP}         # Show this help");
         return ExitCode::SUCCESS;
     }
@@ -197,15 +213,24 @@ fn run_daemon(interval_secs: u64) -> ExitCode {
     let mut virtual_device: Option<UhidBatteryDevice> = None;
     let mut last_status: Option<BatteryStatus> = None;
     #[cfg(feature = "config")]
-    let mut configured = false;
+    let mut configured_mode: Option<bool> = None;
 
     loop {
         match AttackSharkR1::open() {
             Ok(mut mouse) => {
                 #[cfg(feature = "config")]
-                if !configured {
+                if configured_mode != Some(mouse.is_wired()) {
                     apply_config_if_present(&mut mouse);
-                    configured = true;
+                    configured_mode = Some(mouse.is_wired());
+                }
+
+                if mouse.is_wired() {
+                    // Wired USB has no verified battery report. Do not register a
+                    // synthetic 100% power supply in UPower.
+                    virtual_device = None;
+                    last_status = None;
+                    std::thread::sleep(Duration::from_secs(interval_secs));
+                    continue;
                 }
 
                 loop {
@@ -285,7 +310,7 @@ fn run_daemon(interval_secs: u64) -> ExitCode {
                 }
                 #[cfg(feature = "config")]
                 {
-                    configured = false;
+                    configured_mode = None;
                 }
             }
         }

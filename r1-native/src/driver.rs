@@ -137,6 +137,12 @@ impl AttackSharkR1 {
         self.device.interface().is_wired()
     }
 
+    /// Verifies that an opened USB device has not been unplugged.
+    pub fn check_connection(&mut self) -> Result<(), DriverError> {
+        self.device.interface().check_liveness(crate::protocol::TIMEOUT_WIRED_LIVENESS)?;
+        Ok(())
+    }
+
     /// Reads battery charge percentage (0..=100).
     pub fn get_battery_percentage(&mut self) -> Result<u8, DriverError> {
         let status = self.get_battery_status()?;

@@ -14,7 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check Python syntax
-        run: python3 -m py_compile app_gtk.py updater.py build_deb.py
+        run: |
+          python3 -m py_compile app_gtk.py usb_presence.py updater.py build_deb.py
+          python3 -m unittest discover -s tests
       - name: Test native driver
         run: |
           rustup update stable
