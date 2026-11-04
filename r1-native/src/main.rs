@@ -93,26 +93,30 @@ fn main() -> ExitCode {
 
     if args.iter().any(|a| a == CLI_FLAG_BATTERY_STATUS) {
         match AttackSharkR1::open() {
-            Ok(mut mouse) if mouse.is_wired() => match mouse.check_connection() {
-                Ok(()) => {
-                    println!("{{\"percentage\":null,\"charging\":null,\"wired\":true}}");
-                    return ExitCode::SUCCESS;
+            Ok(mut mouse) => {
+                if mouse.is_wired() {
+                    match mouse.check_connection() {
+                        Ok(()) => {
+                            println!("{{\"percentage\":null,\"charging\":null,\"wired\":true}}");
+                            return ExitCode::SUCCESS;
+                        }
+                        Err(error) => {
+                            eprintln!("Error checking mouse connection: {error}");
+                            return ExitCode::FAILURE;
+                        }
+                    }
                 }
-                Err(error) => {
-                    eprintln!("Error checking mouse connection: {error}");
-                    return ExitCode::FAILURE;
+                match mouse.get_battery_status() {
+                    Ok(status) => {
+                        println!("{}", battery_status_json(&status));
+                        return ExitCode::SUCCESS;
+                    }
+                    Err(error) => {
+                        eprintln!("Error querying battery status: {error}");
+                        return ExitCode::FAILURE;
+                    }
                 }
-            },
-            Ok(mut mouse) => match mouse.get_battery_status() {
-                Ok(status) => {
-                    println!("{}", battery_status_json(&status));
-                    return ExitCode::SUCCESS;
-                }
-                Err(error) => {
-                    eprintln!("Error querying battery status: {error}");
-                    return ExitCode::FAILURE;
-                }
-            },
+            }
             Err(error) => {
                 eprintln!("Error connecting to mouse: {error}");
                 return ExitCode::FAILURE;
