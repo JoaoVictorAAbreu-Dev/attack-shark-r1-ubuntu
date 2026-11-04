@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Attack Shark R1
+GenericName=Configuração de mouse
+Comment=Configure DPI e taxa de atualização do Attack Shark R1
+Exec=/usr/bin/attack-shark-r1-gui
+TryExec=/usr/bin/attack-shark-r1-gui
+Icon=attack-shark-r1
+Terminal=false
+StartupNotify=true
+Categories=Settings;HardwareSettings;
+Keywords=mouse;DPI;polling;Attack Shark;R1;

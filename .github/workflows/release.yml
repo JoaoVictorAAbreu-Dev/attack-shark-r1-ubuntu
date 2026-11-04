@@ -1,0 +1,35 @@
+name: Release Ubuntu package
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build native driver
+        run: |
+          rustup update stable
+          cd r1-native
+          cargo build --release --features tuning --locked
+          cp target/release/attack-shark-r1 ../attack-shark-r1
+      - name: Build Debian package
+        run: |
+          python3 build_deb.py
+          package_version="$(dpkg-deb -f dist/*.deb Version)"
+          test "$package_version" = "${GITHUB_REF_NAME#v}-1"
+          cd dist
+          sha256sum *.deb > SHA256SUMS
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.deb dist/SHA256SUMS \
+            --title "Attack Shark R1 $GITHUB_REF_NAME" \
+            --notes "Aplicativo GTK4 para Ubuntu. Atualize pelo botão dentro do aplicativo."

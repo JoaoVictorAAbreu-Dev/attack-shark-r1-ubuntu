@@ -1,0 +1,35 @@
+[package]
+name = "attack-shark-r1"
+version = "0.1.0"
+edition = "2024"
+authors = ["jlucaso"]
+description = "Linux driver and battery daemon for the Attack Shark R1 mouse"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = []
+dpi = []
+polling-rate = []
+sleep = []
+config = ["dpi", "polling-rate", "sleep"]
+tuning = ["config"]
+
+[dependencies]
+rusb = "0.9"
+device-driver = { version = "2.1.1", features = ["macros"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[lib]
+name = "attack_shark_r1"
+path = "src/lib.rs"
+
+[[bin]]
+name = "attack-shark-r1"
+path = "src/main.rs"

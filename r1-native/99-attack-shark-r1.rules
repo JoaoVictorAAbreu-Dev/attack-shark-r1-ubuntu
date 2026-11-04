@@ -1,0 +1,4 @@
+# Attack Shark R1 USB receiver and wired USB-C mode
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d57", ATTR{idProduct}=="fa60", TAG+="uaccess", GROUP="plugdev", MODE="0660"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d57", ATTR{idProduct}=="fa61", TAG+="uaccess", GROUP="plugdev", MODE="0660"
+

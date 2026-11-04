@@ -1,0 +1,7 @@
+/attack-shark-r1
+/deb-stage/
+/dist/
+/.venv/
+__pycache__/
+*.pyc
+*.deb
