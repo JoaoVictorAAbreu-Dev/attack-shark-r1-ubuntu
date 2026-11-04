@@ -9,8 +9,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parent
 PROJECT = Path(os.environ.get("ATTACK_SHARK_OUTPUT_DIR", ROOT / "dist")).resolve()
 STAGE = ROOT / "deb-stage"
-VERSION = "0.5.0-1"
-PACKAGE = PROJECT / "attack-shark-r1_0.5.0_amd64.deb"
+VERSION = "0.6.0-1"
+PACKAGE = PROJECT / "attack-shark-r1_0.6.0_amd64.deb"
 
 
 def put(source, destination, mode):
@@ -72,7 +72,7 @@ Upstream-Name: attack-shark-r1
 Source: https://github.com/jlucaso1/attack-shark-r1
 License: MIT or Apache-2.0
 Comment: The native driver is based on commit ed6a4c1aa63f31471e26dd5dd7db533905b63ad9.
- The GTK4 dashboard, packaging and --apply-config command were added locally.
+ The GTK4 dashboard, packaging, --apply-config and --battery-status were added locally.
  The mouse image and original logo were supplied by the user for this package.
  The application icon was generated from the supplied logo with OpenAI ImageGen.
  Its outer background was removed with a local transparency mask.

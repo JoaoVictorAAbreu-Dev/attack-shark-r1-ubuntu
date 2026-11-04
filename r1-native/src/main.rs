@@ -10,6 +10,7 @@ use attack_shark_r1::{
 
 const CLI_FLAG_QUERY_CHARGE: &str = "-query-charge";
 const CLI_FLAG_BATTERY: &str = "--battery";
+const CLI_FLAG_BATTERY_STATUS: &str = "--battery-status";
 const CLI_FLAG_BATTERY_SHORT: &str = "-b";
 const CLI_FLAG_HELP: &str = "--help";
 const CLI_FLAG_HELP_SHORT: &str = "-h";
@@ -26,6 +27,27 @@ fn is_battery_query_arg(arg: &str) -> bool {
 
 fn is_help_arg(arg: &str) -> bool {
     arg == CLI_FLAG_HELP || arg == CLI_FLAG_HELP_SHORT
+}
+
+fn battery_status_json(status: &BatteryStatus) -> String {
+    // The current wired transport fabricates 100% and a charging flag instead
+    // of reading the actual charge level, so neither value is trustworthy.
+    let percentage = if status.is_wired {
+        "null".to_owned()
+    } else {
+        status.percentage.to_string()
+    };
+    let charging = if status.is_wired {
+        "null"
+    } else if status.is_charging {
+        "true"
+    } else {
+        "false"
+    };
+    format!(
+        "{{\"percentage\":{percentage},\"charging\":{charging},\"wired\":{}}}",
+        status.is_wired
+    )
 }
 
 fn main() -> ExitCode {
@@ -63,6 +85,25 @@ fn main() -> ExitCode {
         }
     }
 
+    if args.iter().any(|a| a == CLI_FLAG_BATTERY_STATUS) {
+        match AttackSharkR1::open() {
+            Ok(mut mouse) => match mouse.get_battery_status() {
+                Ok(status) => {
+                    println!("{}", battery_status_json(&status));
+                    return ExitCode::SUCCESS;
+                }
+                Err(error) => {
+                    eprintln!("Error querying battery status: {error}");
+                    return ExitCode::FAILURE;
+                }
+            },
+            Err(error) => {
+                eprintln!("Error connecting to mouse: {error}");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+
     if args.iter().any(|a| is_battery_query_arg(a)) {
         match AttackSharkR1::open() {
             Ok(mut mouse) => match mouse.get_battery_percentage() {
@@ -89,6 +130,7 @@ fn main() -> ExitCode {
         println!("Usage:");
         println!("  attack-shark-r1                # Run daemon (default)");
         println!("  attack-shark-r1 {CLI_FLAG_QUERY_CHARGE}  # Print battery percentage");
+        println!("  attack-shark-r1 {CLI_FLAG_BATTERY_STATUS}  # Print battery JSON; wired level is unknown");
         #[cfg(feature = "config")]
         println!("  attack-shark-r1 {CLI_FLAG_APPLY_CONFIG}  # Apply settings once");
         println!("  attack-shark-r1 {CLI_FLAG_HELP}         # Show this help");
@@ -96,6 +138,39 @@ fn main() -> ExitCode {
     }
 
     run_daemon(DEFAULT_POLL_INTERVAL_SECS)
+}
+
+#[cfg(test)]
+mod battery_status_tests {
+    use super::*;
+
+    fn sample(percentage: u8, is_charging: bool, is_wired: bool) -> BatteryStatus {
+        BatteryStatus {
+            percentage,
+            is_charging,
+            is_wired,
+            raw_charge: 0,
+            status_code: 0,
+            flags: 0,
+            report_id: 3,
+        }
+    }
+
+    #[test]
+    fn wireless_status_reports_percentage_and_charging() {
+        assert_eq!(
+            battery_status_json(&sample(80, true, false)),
+            r#"{"percentage":80,"charging":true,"wired":false}"#
+        );
+    }
+
+    #[test]
+    fn wired_status_does_not_report_fabricated_full_charge() {
+        assert_eq!(
+            battery_status_json(&sample(100, true, true)),
+            r#"{"percentage":null,"charging":null,"wired":true}"#
+        );
+    }
 }
 
 #[cfg(feature = "config")]

@@ -2,10 +2,11 @@
 """Attack Shark R1 dashboard for Ubuntu (GTK 4)."""
 
 import os
+import json
 from pathlib import Path
 import subprocess
 import tempfile
-from threading import Thread
+from threading import Lock, Thread
 from datetime import datetime
 
 import gi
@@ -13,7 +14,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk
 from updater import download_release, install_package, installed_version, is_newer, latest_release
 
 
@@ -58,6 +59,15 @@ window { background: @page_bg; color: @ink; font-family: Cantarell, sans-serif; 
 .divider { background: @line; min-height: 1px; }
 .product-name { color: @ink; font-size: 18px; font-weight: 700; }
 .battery { color: @ink; font-size: 31px; font-weight: 700; }
+.battery-state { color: @blue; font-size: 12px; font-weight: 700; }
+.battery-full { color: #17603a; }
+.battery-unknown { color: @muted; }
+.battery-outline { border: 2px solid #4a5e73; border-radius: 5px; }
+.battery-tip { background: #4a5e73; border-radius: 0 2px 2px 0; }
+.battery-fill { background: #2b5987; border-radius: 2px; }
+.battery-fill-charging { background: #2664a8; }
+.battery-fill-low { background: #bf4930; }
+.battery-fill-full { background: #1a7442; }
 .badge { background: #e8f3ed; color: #185b38; border: 1px solid #b8d8c3;
          border-radius: 7px; padding: 7px 11px; font-size: 12px; font-weight: 700; }
 .badge-error { background: #fff0ed; color: #94342e; border-color: #e8bdb8; }
@@ -167,6 +177,24 @@ def friendly_error(text, operation="battery"):
     return detail
 
 
+def parse_battery_status(output):
+    try:
+        status = json.loads(output)
+    except (json.JSONDecodeError, TypeError) as error:
+        raise ValueError("Resposta de bateria inválida do driver.") from error
+    if not isinstance(status, dict) or type(status.get("wired")) is not bool:
+        raise ValueError("Resposta de bateria inválida do driver.")
+    percentage = status.get("percentage")
+    charging = status.get("charging")
+    if status["wired"]:
+        if percentage is not None or charging is not None:
+            raise ValueError("Leitura por cabo sem estado confiável.")
+        return None, None, True
+    if type(percentage) is not int or not 0 <= percentage <= 100 or type(charging) is not bool:
+        raise ValueError("Resposta de bateria inválida do driver.")
+    return percentage, charging, False
+
+
 class Dashboard(Gtk.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Attack Shark R1")
@@ -174,11 +202,21 @@ class Dashboard(Gtk.ApplicationWindow):
         self.set_size_request(680, 520)
         self.set_icon_name("attack-shark-r1")
         self.busy = False
+        self.battery_busy = False
+        self.device_lock = Lock()
+        self.battery_percentage = None
+        self.battery_display = 0.0
+        self.battery_charging = None
+        self.battery_wired = False
+        self.battery_animation_source = None
+        self.full_notified = False
+        self.last_battery_time = None
         self.update_busy = False
         self.available_release = None
         self.rate = 1000
         self._build()
         GLib.idle_add(self.refresh_battery)
+        GLib.timeout_add_seconds(30, self._battery_timer)
 
     def _build(self):
         values, self.config_warning = read_config()
@@ -254,15 +292,15 @@ class Dashboard(Gtk.ApplicationWindow):
 
     def _device_panel(self):
         panel = css(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0), "device-panel")
-        panel.set_size_request(300, 500)
-        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        panel.set_size_request(300, 430)
+        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         inner.set_margin_top(20)
         inner.set_margin_bottom(20)
         inner.set_margin_start(20)
         inner.set_margin_end(20)
         panel.append(inner)
         inner.append(label("DISPOSITIVO  /  R1", "eyebrow"))
-        art = picture(MOUSE_IMAGE, 260, 278, "Mouse Attack Shark R1 preto visto de cima")
+        art = picture(MOUSE_IMAGE, 260, 210, "Mouse Attack Shark R1 preto visto de cima")
         art.set_halign(Gtk.Align.CENTER)
         inner.append(art)
         inner.append(label("Attack Shark R1", "product-name"))
@@ -275,8 +313,25 @@ class Dashboard(Gtk.ApplicationWindow):
         battery_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         battery_text.set_hexpand(True)
         battery_text.append(label("BATERIA", "eyebrow"))
+        readout = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        readout.set_valign(Gtk.Align.CENTER)
+        icon = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+        icon.set_valign(Gtk.Align.CENTER)
+        icon.set_tooltip_text("Nível de bateria do R1")
+        frame = css(Gtk.Fixed(), "battery-outline")
+        frame.set_size_request(52, 26)
+        self.battery_fill = css(Gtk.Box(), "battery-fill")
+        self.battery_fill.set_size_request(0, 18)
+        self.battery_fill.set_visible(False)
+        frame.put(self.battery_fill, 4, 4)
+        icon.append(frame)
+        tip = css(Gtk.Box(), "battery-tip")
+        tip.set_size_request(5, 12)
+        icon.append(tip)
+        readout.append(icon)
         self.battery_value = label("—", "battery")
-        battery_text.append(self.battery_value)
+        readout.append(self.battery_value)
+        battery_text.append(readout)
         battery_line.append(battery_text)
         self.battery_button = css(Gtk.Button(label="Atualizar"), "secondary")
         self.battery_button.set_tooltip_text("Consultar a bateria do R1")
@@ -284,7 +339,10 @@ class Dashboard(Gtk.ApplicationWindow):
         self.battery_button.connect("clicked", self.refresh_battery)
         battery_line.append(self.battery_button)
         inner.append(battery_line)
+        self.battery_state = label("Aguardando leitura", "battery-state", "battery-unknown")
+        inner.append(self.battery_state)
         self.battery_note = label("Aguardando leitura", "section-note")
+        self.battery_note.set_wrap(True)
         inner.append(self.battery_note)
         return panel
 
@@ -375,6 +433,59 @@ class Dashboard(Gtk.ApplicationWindow):
         inner.append(rates)
         return panel
 
+    def _update_battery_fill(self):
+        level = max(0.0, min(100.0, self.battery_display))
+        self.battery_fill.set_visible(self.battery_percentage is not None and level > 0)
+        self.battery_fill.set_size_request(round(42 * level / 100), 18)
+        for style in ("battery-fill-charging", "battery-fill-low", "battery-fill-full"):
+            self.battery_fill.remove_css_class(style)
+        if self.battery_percentage == 100:
+            self.battery_fill.add_css_class("battery-fill-full")
+        elif self.battery_percentage is not None and self.battery_percentage <= 20:
+            self.battery_fill.add_css_class("battery-fill-low")
+        elif self.battery_charging:
+            self.battery_fill.add_css_class("battery-fill-charging")
+
+    def _animate_battery(self, percentage):
+        if self.battery_animation_source is not None:
+            GLib.source_remove(self.battery_animation_source)
+            self.battery_animation_source = None
+        start = self.battery_display if self.battery_percentage is not None else 0.0
+        self.battery_percentage = percentage
+        if abs(start - percentage) < 0.2:
+            self.battery_display = float(percentage)
+            self._update_battery_fill()
+            return
+        self.battery_animation_from = start
+        self.battery_animation_target = float(percentage)
+        self.battery_animation_start = GLib.get_monotonic_time()
+        self.battery_animation_source = GLib.timeout_add(16, self._battery_animation_step)
+
+    def _battery_animation_step(self):
+        elapsed = (GLib.get_monotonic_time() - self.battery_animation_start) / 600_000
+        progress = min(1.0, elapsed)
+        eased = 1 - (1 - progress) ** 3
+        self.battery_display = self.battery_animation_from + (
+            self.battery_animation_target - self.battery_animation_from
+        ) * eased
+        self._update_battery_fill()
+        if progress >= 1:
+            self.battery_animation_source = None
+            return False
+        return True
+
+    def _clear_battery(self):
+        if self.battery_animation_source is not None:
+            GLib.source_remove(self.battery_animation_source)
+            self.battery_animation_source = None
+        self.battery_percentage = None
+        self.battery_display = 0.0
+        self._update_battery_fill()
+
+    def _battery_timer(self):
+        self.refresh_battery(silent=True)
+        return True
+
     def _rate_toggled(self, button, rate):
         if button.get_active():
             self.rate = rate
@@ -400,7 +511,7 @@ class Dashboard(Gtk.ApplicationWindow):
     def _set_busy(self, busy):
         self.busy = busy
         self.apply_button.set_sensitive(not busy)
-        self.battery_button.set_sensitive(not busy)
+        self.battery_button.set_sensitive(not busy and not self.battery_busy)
 
     def check_updates(self, *_):
         if self.update_busy:
@@ -456,48 +567,95 @@ class Dashboard(Gtk.ApplicationWindow):
             self._message("Atualização instalada. Feche e abra o aplicativo novamente.")
         return False
 
-    def refresh_battery(self, *_):
-        if self.busy:
+    def refresh_battery(self, *_, silent=False):
+        if self.busy or self.battery_busy:
             return False
-        self._set_busy(True)
-        self.battery_note.set_text("Consultando...")
-        self._message("Consultando a bateria do R1...")
-        Thread(target=self._battery_worker, daemon=True).start()
+        self.battery_busy = True
+        self.battery_button.set_sensitive(False)
+        if not silent:
+            self.battery_note.set_text("Consultando...")
+            self._message("Consultando a bateria do R1...")
+        Thread(target=self._battery_worker, args=(silent,), daemon=True).start()
         return False
 
-    def _battery_worker(self):
+    def _battery_worker(self, silent):
         try:
-            result = subprocess.run(
-                [str(DRIVER), "--battery"], capture_output=True, text=True, timeout=8
-            )
-            GLib.idle_add(self._battery_finished, result.returncode, result.stdout, result.stderr)
+            with self.device_lock:
+                result = subprocess.run(
+                    [str(DRIVER), "--battery-status"], capture_output=True, text=True, timeout=8
+                )
+            GLib.idle_add(self._battery_finished, result.returncode, result.stdout, result.stderr, silent)
         except (OSError, subprocess.TimeoutExpired) as error:
-            GLib.idle_add(self._battery_finished, 1, "", str(error))
+            GLib.idle_add(self._battery_finished, 1, "", str(error), silent)
 
-    def _battery_finished(self, code, output, error):
-        self._set_busy(False)
+    def _battery_finished(self, code, output, error, silent=False):
+        self.battery_busy = False
+        self.battery_button.set_sensitive(not self.busy)
         if code == 0:
             try:
-                value = int(output.strip())
-                if not 0 <= value <= 100:
-                    raise ValueError("fora do intervalo")
-            except ValueError:
-                return self._battery_finished(1, "", "Resposta de bateria inválida do driver.")
-            self.battery_value.set_text(f"{value}%")
-            self.battery_note.set_text("Atualizada às " + datetime.now().strftime("%H:%M"))
-            self.device_badge.set_text("R1 conectado")
-            self.device_badge.remove_css_class("badge-error")
-            self._message("Leitura da bateria concluída.")
-        else:
-            self.battery_value.set_text("—")
-            self.battery_note.set_text("Leitura indisponível")
-            if "Operation timed out" in error or "Timeout" in error:
+                value, charging, wired = parse_battery_status(output)
+            except ValueError as problem:
+                code, error = 1, str(problem)
+            else:
+                self.battery_wired = wired
+                self.device_badge.set_text("R1 por cabo" if wired else "R1 conectado")
+                self.device_badge.remove_css_class("badge-error")
+                self.battery_state.remove_css_class("battery-full")
+                self.battery_state.remove_css_class("battery-unknown")
+                if wired:
+                    self._clear_battery()
+                    self.battery_charging = None
+                    self.battery_value.set_text("—")
+                    self.battery_state.set_text("Cabo conectado")
+                    self.battery_state.add_css_class("battery-unknown")
+                    self.battery_note.set_text("Carga não informada pelo modo USB.")
+                    if not silent:
+                        self._message("O R1 está por cabo; o driver não lê a carga nesse modo.")
+                else:
+                    previous = self.battery_percentage
+                    self.battery_charging = charging
+                    self._animate_battery(value)
+                    self.battery_value.set_text(f"{value}%")
+                    self.last_battery_time = datetime.now().strftime("%H:%M")
+                    self.battery_note.set_text("Atualizada às " + self.last_battery_time)
+                    if value == 100:
+                        self.battery_state.set_text("Carga completa")
+                        self.battery_state.add_css_class("battery-full")
+                        if previous is not None and previous < 100 and not self.full_notified:
+                            notice = Gio.Notification.new("R1 carregado")
+                            notice.set_body("A bateria do mouse chegou a 100%.")
+                            self.get_application().send_notification("r1-battery-full", notice)
+                            self.full_notified = True
+                    elif charging:
+                        self.battery_state.set_text("Carregando")
+                        self.full_notified = False
+                    else:
+                        self.battery_state.set_text("Em uso")
+                        self.battery_state.add_css_class("battery-unknown")
+                        self.full_notified = False
+                    if not silent:
+                        self._message("Leitura da bateria concluída.")
+                return False
+        if code != 0:
+            timeout = "Operation timed out" in error or "Timeout" in error
+            if not (timeout and self.battery_percentage is not None):
+                self._clear_battery()
+                self.battery_value.set_text("—")
+            self.battery_state.remove_css_class("battery-full")
+            self.battery_state.add_css_class("battery-unknown")
+            self.battery_state.set_text("Última leitura" if timeout and self.battery_percentage is not None else "Leitura indisponível")
+            self.battery_note.set_text(
+                ("Sem resposta agora · " + self.last_battery_time) if timeout and self.last_battery_time
+                else "Verifique a conexão e tente novamente."
+            )
+            if timeout:
                 self.device_badge.set_text("R1 detectado")
                 self.device_badge.remove_css_class("badge-error")
             else:
                 self.device_badge.set_text("Conexão indisponível")
                 self.device_badge.add_css_class("badge-error")
-            self._message(friendly_error(error), error=True)
+            if not silent:
+                self._message(friendly_error(error), error=True)
         return False
 
     def apply(self, *_):
@@ -519,9 +677,10 @@ class Dashboard(Gtk.ApplicationWindow):
             GLib.idle_add(self._apply_finished, False, f"Não foi possível salvar: {error}")
             return
         try:
-            result = subprocess.run(
-                [str(DRIVER), "--apply-config"], capture_output=True, text=True, timeout=12
-            )
+            with self.device_lock:
+                result = subprocess.run(
+                    [str(DRIVER), "--apply-config"], capture_output=True, text=True, timeout=12
+                )
             if result.returncode == 0:
                 GLib.idle_add(self._apply_finished, True, "Comandos enviados ao R1. O dispositivo não oferece leitura de confirmação.")
             else:

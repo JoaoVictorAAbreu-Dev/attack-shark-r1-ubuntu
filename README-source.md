@@ -5,8 +5,8 @@
 - `r1-native/`: driver Rust baseado em
   [jlucaso1/attack-shark-r1](https://github.com/jlucaso1/attack-shark-r1),
   commit `ed6a4c1aa63f31471e26dd5dd7db533905b63ad9`, com o comando
-  `--apply-config` e regra udev de acesso restrito.
-- `mouse.png`: imagem fornecida pelo usuário, usada no centro do dashboard.
+  `--apply-config`, `--battery-status` e regra udev de acesso restrito.
+- `mouse.png`: imagem fornecida pelo usuário, usada no painel do dispositivo.
 - `logo-original.png`: marca fornecida pelo usuário.
 - `app-icon.png`: versão para o menu/dock produzida com o ImageGen integrado,
   editando a marca original. O fundo externo foi removido com uma máscara de
@@ -25,7 +25,7 @@
 Para reconstruir em Ubuntu 26.04 x86_64, instale Rust/Cargo, Python 3 com
 PyGObject, GTK4 e GdkPixbuf, então execute `python3 build_deb.py`. O script
 compila o driver se o binário local não existir e produz o pacote em `dist/`.
-O driver oferece as opções `--battery` e `--apply-config`.
+O driver oferece `--battery-status` em JSON, `--battery` legado e `--apply-config`.
 
 O aplicativo depende dos componentes GTK4 do sistema. O pacote não inclui o
 instalador Windows nem seu código.

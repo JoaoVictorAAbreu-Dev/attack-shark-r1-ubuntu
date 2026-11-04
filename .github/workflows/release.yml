@@ -17,6 +17,7 @@ jobs:
         run: |
           rustup update stable
           cd r1-native
+          cargo test --features tuning --locked
           cargo build --release --features tuning --locked
           cp target/release/attack-shark-r1 ../attack-shark-r1
       - name: Build Debian package

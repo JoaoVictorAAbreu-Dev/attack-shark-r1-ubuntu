@@ -1,0 +1,22 @@
+name: Check source
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Python syntax
+        run: python3 -m py_compile app_gtk.py updater.py build_deb.py
+      - name: Test native driver
+        run: |
+          rustup update stable
+          cd r1-native
+          cargo test --features tuning --locked
