@@ -9,7 +9,8 @@
 - `mouse.png`: imagem fornecida pelo usuário, usada no centro do dashboard.
 - `logo-original.png`: marca fornecida pelo usuário.
 - `app-icon.png`: versão para o menu/dock produzida com o ImageGen integrado,
-  editando a marca original. Prompt usado: "Edit the attached user-supplied black
+  editando a marca original. O fundo externo foi removido com uma máscara de
+  transparência local que preserva os pixels do ícone. Prompt usado: "Edit the attached user-supplied black
   Attack Shark abstract shark-fin/A monogram into a polished Ubuntu/GNOME desktop
   application icon. Preserve the exact recognizable black angular monogram
   silhouette, proportions, cutout and orientation; do not invent a new logo.

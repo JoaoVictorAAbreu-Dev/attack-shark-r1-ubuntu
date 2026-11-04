@@ -1,6 +1,6 @@
 # Attack Shark R1 para Ubuntu
 
-Aplicativo desktop GTK4 independente para o mouse Attack Shark R1. A versão 0.4.1
+Aplicativo desktop GTK4 independente para o mouse Attack Shark R1. A versão 0.4.2
 mostra o mouse em um dashboard e permite consultar a bateria, escolher seis
 níveis de DPI (100 a 18.000, em passos de 100), o perfil ativo e a taxa USB
 (125, 250, 500 ou 1000 Hz).
@@ -8,7 +8,7 @@ níveis de DPI (100 a 18.000, em passos de 100), o perfil ativo e a taxa USB
 ## Instalação
 
 ```bash
-sudo dpkg -i ./attack-shark-r1_0.4.1_amd64.deb
+sudo dpkg -i ./attack-shark-r1_0.4.2_amd64.deb
 ```
 
 Depois, desconecte e reconecte o receptor USB ou o cabo. Abra **Attack Shark R1**
@@ -42,7 +42,8 @@ commit `ed6a4c1aa63f31471e26dd5dd7db533905b63ad9`
 (MIT ou Apache-2.0). Foi acrescentado `--apply-config`; a interface GTK4 e o
 empacotamento são novos. O instalador original fornecido contém apenas
 executáveis Windows, sem código-fonte. O pacote não inclui esse instalador.
-A logo enviada foi adaptada com OpenAI ImageGen para um ícone de aplicativo;
+A logo enviada foi adaptada com OpenAI ImageGen para um ícone de aplicativo
+com fundo externo transparente;
 o mouse enviado anteriormente permanece no centro do dashboard.
 
 Ainda não há remapeamento de botões, macros, iluminação ou atualização de
